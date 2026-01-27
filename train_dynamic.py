@@ -8,6 +8,17 @@ from sklearn.model_selection import train_test_split
 # Directory dati dinamici
 DYNAMIC_DIR = './dynamic_data'
 
+#Ribalta i landmarks
+def flip_hand_sequence(sequence):
+    """Ribalta sequenza usando numpy vettorizzato"""
+    # sequence shape: (30, 42)
+    flipped = sequence.copy()
+    
+    # Ribalta coordinate X (indici pari: 0, 2, 4, ...)
+    flipped[:, 0::2] = 1.0 - flipped[:, 0::2]
+    
+    return flipped
+
 def load_dynamic_data():
     """Carica tutti i dati dinamici registrati"""
     sequences = []
@@ -39,8 +50,19 @@ def load_dynamic_data():
         # Aggiungi alle liste
         sequences.extend(gesture_sequences)
         labels.extend([idx] * len(gesture_sequences))
+
+        for seq in gesture_sequences:
+            sequences.append(seq)
+            labels.append(idx)
+            
+            # Aggiungi sequenze FLIPPATE (data augmentation)
+            flipped_seq = flip_hand_sequence(np.array(seq))
+            sequences.append(flipped_seq)
+            labels.append(idx)
+
         label_map[idx] = gesture_name
-    
+
+    print(f"\nData augmentation: {len(sequences)} sequenze totali (originali + flipped)")
     return np.array(sequences), np.array(labels), label_map
 
 def build_lstm_model(input_shape, num_classes):

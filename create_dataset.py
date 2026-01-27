@@ -51,6 +51,16 @@ for dir_ in os.listdir(DATA_DIR): #Itero nella directory
             data.append(data_aux) #salvo tutti gli array con le coordinate nell'array di dati
             labels.append(dir_)
 
+            # Aggiungi dati FLIPPATI (data augmentation)
+            flipped_aux = []
+            for i in range(0, len(data_aux), 2):
+                x = 1.0 - data_aux[i]  # Ribalta X
+                y = data_aux[i + 1]
+                flipped_aux.extend([x, y])
+            
+            data.append(flipped_aux)
+            labels.append(dir_)
+
                 #Landmarks (dimostrazione)
             '''
                 per ogni risultato disegnamo i landmarks
