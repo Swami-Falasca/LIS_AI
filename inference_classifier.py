@@ -25,6 +25,11 @@ labels_dict = {0: 'a', 1: 'b', 2: 'c'}
 sequence_buffer = deque(maxlen=30)  # Buffer per 30 frame
 dynamic_mode = False  # True per attivare riconoscimento dinamico
 
+movement_detected = False
+movement_frames = 0
+MOVEMENT_THRESHOLD = 0.0005  # Soglia più bassa per rilevamento precoce
+
+
 class HybridGestureRecognizer:
     def __init__(self, dynamic_model_path=None):
         # Carica modello statico ORIGINALE
@@ -70,6 +75,8 @@ class HybridGestureRecognizer:
         
         # Buffer per sequenze
         self.sequence_buffer = deque(maxlen=30)
+        self.last_dynamic_time = 0
+        self.dynamic_cooldown = 15  # Attesa minima tra predizioni dinamiche
     
     def predict(self, landmarks):
         """Predice usando entrambi i modelli - FUNZIONA CON TUTTI I TIPI"""
@@ -82,11 +89,14 @@ class HybridGestureRecognizer:
             # Aggiungi alla sequenza
             self.sequence_buffer.append(landmarks)
             
+            # Controlla cooldown per evitare predizioni troppo ravvicinate
+            self.last_dynamic_time += 1
+
             # Quando abbiamo 30 frame
             if len(self.sequence_buffer) == 30:
-                has_movement = analyze_movement(self.sequence_buffer)
+                has_movement, variance = analyze_movement(self.sequence_buffer)
                 
-                if has_movement:
+                if has_movement and self.last_dynamic_time >= self.dynamic_cooldown:
                     sequence_array = np.array(self.sequence_buffer)
                     
                     # ====== GESTIONE TUTTI I TIPI DI MODELLO ======
@@ -119,7 +129,11 @@ class HybridGestureRecognizer:
                     # Log dettagliato
                     print(f"[{self.model_type}] {dynamic_pred} ({confidence:.1%})")
                     
-                    if confidence > 0.85:  # Aumenta da 0.8 a 0.85 o più
+                    if confidence > 0.85 and dynamic_pred!='S':  # Aumenta da 0.8 a 0.85 o più
+                        print(f"🔄 Dinamico attivato ({confidence:.1%})")
+                        self.sequence_buffer.clear()
+                        return dynamic_pred
+                    elif confidence > 0.90:
                         print(f"🔄 Dinamico attivato ({confidence:.1%})")
                         self.sequence_buffer.clear()
                         return dynamic_pred
@@ -146,7 +160,7 @@ class HybridGestureRecognizer:
 #model = model_dict['model']
 
 recognizer = HybridGestureRecognizer(
-    dynamic_model_path='./dynamic_models/xgboost_model.p'
+    dynamic_model_path='./dynamic_models/gru_model.p'
 )
 
 last_display_char = ""
@@ -170,7 +184,7 @@ def analyze_movement(sequence_buffer):
     position_variance = np.var(sequence_array, axis=0)
     
     #se la varianza media supera una soglia, c'è movimento
-    movement_threshold = 0.002  # Più alta = meno falsi positivi  
+    movement_threshold = 0.005  # Più alta = meno falsi positivi  
     
     # Filtro migliore: controlla sia X che Y
     xy_variance = np.var(sequence_array, axis=0)
@@ -180,7 +194,7 @@ def analyze_movement(sequence_buffer):
     finger_variance = np.var(sequence_array[:, [20,21,22,23]], axis=0)  # Dita
     finger_movement = np.mean(finger_variance)
     
-    return mean_variance > movement_threshold and finger_movement > 0.0005
+    return (mean_variance > movement_threshold and finger_movement > 0.0005), mean_variance
 
 while True:
 
@@ -236,8 +250,11 @@ while True:
 
         # Usa il riconoscitore IBRIDO (statico + dinamico automaticamente)
         if len(data_aux) == 42:
+
+            
             predicted_character = recognizer.predict(np.asarray(data_aux))
             
+
             # 1. Se abbiamo un blocco attivo per dinamica precedente
             if dynamic_lock_counter > 0:
                 dynamic_lock_counter -= 1
