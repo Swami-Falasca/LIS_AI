@@ -23,7 +23,7 @@ sequence_buffer = deque(maxlen=30)
 recording = False
 current_gesture = ""
 samples_recorded = 0
-target_samples = 50  # Campioni da registrare per ogni gesto
+target_samples = 100  # Campioni da registrare per ogni gesto
 
 print("=== STRUMENTO REGISTRAZIONE GESTI DINAMICI ===")
 print("Comandi:")
