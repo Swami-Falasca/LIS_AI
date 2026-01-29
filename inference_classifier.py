@@ -3,7 +3,6 @@ import mediapipe as mp
 import pickle
 import numpy as np
 from collections import deque
-import os
 
 #se non va provare 1, 2...
 #cap = cv2.VideoCapture(0)
@@ -25,150 +24,98 @@ labels_dict = {0: 'a', 1: 'b', 2: 'c'}
 sequence_buffer = deque(maxlen=30)  # Buffer per 30 frame
 dynamic_mode = False  # True per attivare riconoscimento dinamico
 
-movement_detected = False
-movement_frames = 0
-MOVEMENT_THRESHOLD = 0.0005  # Soglia più bassa per rilevamento precoce
-
-
 class HybridGestureRecognizer:
-    def __init__(self, dynamic_model_path=None):
-        # Carica modello statico ORIGINALE
+    def __init__(self):
+        # Carica modello statico
         self.static_model = pickle.load(open('./model.p','rb'))['model']
         
-        # Cerca modello dinamico se non specificato
-        if dynamic_model_path is None:
-            # Cerca in dynamic_models/
-            if os.path.exists('./dynamic_models'):
-                model_files = [f for f in os.listdir('./dynamic_models') 
-                             if f.endswith('_model.p')]
-                if model_files:
-                    dynamic_model_path = f'./dynamic_models/{model_files[0]}'
-            # Altrimenti cerca nella root
-            elif os.path.exists('./dynamic_model.p'):
-                dynamic_model_path = './dynamic_model.p'
-        
-        # Prova a caricare modello dinamico
-        if dynamic_model_path and os.path.exists(dynamic_model_path):
-            try:
-                with open(dynamic_model_path, 'rb') as f:
-                    dynamic_data = pickle.load(f)
-                    self.dynamic_model = dynamic_data['model']
-                    self.dynamic_label_map = dynamic_data['label_map']
-                    self.model_type = dynamic_data.get('model_name', 'unknown')
-                    self.input_shape = dynamic_data.get('input_shape', None)
-                    self.has_dynamic_model = True
-                    
-                    print(f"✅ Modello dinamico caricato: {os.path.basename(dynamic_model_path)}")
-                    print(f"   Tipo: {self.model_type}")
-                    print(f"   Lettere: {list(self.dynamic_label_map.values())}")
-                    
-                    # Debug: mostra shape atteso
-                    if self.input_shape:
-                        print(f"   Input shape atteso: {self.input_shape}")
-                    
-            except Exception as e:
-                print(f"❌ Errore caricamento {dynamic_model_path}: {e}")
-                self.has_dynamic_model = False
-        else:
+        # Prova a caricare modello dinamico (se esiste)
+        try:
+            with open('./dynamic_model.p', 'rb') as f:
+                dynamic_data = pickle.load(f)
+                self.dynamic_model = dynamic_data['model']
+                self.dynamic_label_map = dynamic_data['label_map']
+                self.has_dynamic_model = True
+                print(f"Modello dinamico caricato. Lettere: {list(self.dynamic_label_map.values())}")
+        except:
             self.has_dynamic_model = False
-            print("⚠️  Nessun modello dinamico trovato")
+            print("Modello dinamico non trovato. Userò solo modello statico.")
         
         # Buffer per sequenze
         self.sequence_buffer = deque(maxlen=30)
-        self.last_dynamic_time = 0
-        self.dynamic_cooldown = 15  # Attesa minima tra predizioni dinamiche
+        self.current_prediction = ""
+
+        # Lettere che potrebbero essere confuse statiche/dinamiche
+        #self.ambiguous_letters = ['i', 'h', 'n', 'q','o','t','m','x']  # 'I' potrebbe essere 'J', ecc.
     
     def predict(self, landmarks):
-        """Predice usando entrambi i modelli - FUNZIONA CON TUTTI I TIPI"""
+        """Predice usando entrambi i modelli automaticamente"""
         
-        # 1. Predizione statica
+        # 1. Prova modello statico
         static_pred = self.static_model.predict([landmarks])[0]
         
-        # 2. Se abbiamo modello dinamico
+        # 2. Se è una lettera che potrebbe essere dinamica...
         if self.has_dynamic_model:
             # Aggiungi alla sequenza
             self.sequence_buffer.append(landmarks)
             
-            # Controlla cooldown per evitare predizioni troppo ravvicinate
-            self.last_dynamic_time += 1
-
-            # Quando abbiamo 30 frame
+            # Quando abbiamo abbastanza frame, analizza
             if len(self.sequence_buffer) == 30:
-                has_movement, variance = analyze_movement(self.sequence_buffer)
+                # PRIMA di usare modello dinamico, controlla se c'è MOVIMENTO
+                has_movement = analyze_movement(self.sequence_buffer)  # <-- AGGIUNTA
                 
-                if has_movement and self.last_dynamic_time >= self.dynamic_cooldown:
-                    sequence_array = np.array(self.sequence_buffer)
+                if has_movement:  # <-- SOLO SE C'È MOVIMENTO
+                    #Usa modello dinamico
+                    sequence_array = np.array(self.sequence_buffer).reshape(1, 30, -1)
                     
-                    # ====== GESTIONE TUTTI I TIPI DI MODELLO ======
+                    #Predici con modello dinamico
+                    dynamic_pred_proba = self.dynamic_model.predict(sequence_array, verbose=0)
+                    dynamic_pred_idx = np.argmax(dynamic_pred_proba[0])
+                    dynamic_pred = self.dynamic_label_map[dynamic_pred_idx]
                     
-                    # A) RANDOM FOREST / XGBoost / SVM / MLP
-                    #    (modelli scikit-learn con predict_proba)
-                    if hasattr(self.dynamic_model, 'predict_proba'):
-                        # Appiattisci: (30, 42) -> (1260,)
-                        sequence_flat = sequence_array.flatten().reshape(1, -1)
-                        pred_proba = self.dynamic_model.predict_proba(sequence_flat)[0]
+                    #Controlla confidence
+                    confidence = np.max(dynamic_pred_proba[0])
                     
-                    # B) MODELLI KERAS (LSTM/GRU/CNN)
-                    #    (hanno predict ma non predict_proba)
-                    elif hasattr(self.dynamic_model, 'predict'):
-                        # Mantieni shape: (1, 30, 42)
-                        sequence_reshaped = sequence_array.reshape(1, 30, 42)
-                        pred_proba = self.dynamic_model.predict(sequence_reshaped, verbose=0)[0]
-                    
-                    # C) MODELLO SCONOSCIUTO
+                    #Se confidence alta (>80%) e diversa da statica, usa dinamica
+                    if confidence > 0.8 and dynamic_pred != static_pred:
+                        self.current_prediction = dynamic_pred
+                        print(f"[Dinamico] Riconosciuto: {dynamic_pred} (confidence: {confidence:.1%})")
                     else:
-                        print("⚠️  Tipo modello sconosciuto, uso statico")
-                        self.sequence_buffer.clear()
-                        return static_pred
-                    
-                    # Predizione finale
-                    pred_idx = np.argmax(pred_proba)
-                    dynamic_pred = self.dynamic_label_map[pred_idx]
-                    confidence = pred_proba[pred_idx]
-                    
-                    # Log dettagliato
-                    print(f"[{self.model_type}] {dynamic_pred} ({confidence:.1%})")
-                    
-                    if confidence > 0.85 and dynamic_pred!='S':  # Aumenta da 0.8 a 0.85 o più
-                        print(f"🔄 Dinamico attivato ({confidence:.1%})")
-                        self.sequence_buffer.clear()
-                        return dynamic_pred
-                    elif confidence > 0.90:
-                        print(f"🔄 Dinamico attivato ({confidence:.1%})")
-                        self.sequence_buffer.clear()
-                        return dynamic_pred
-                    else:
-                        print(f"   Confidence bassa o stessa lettera")
-                
+                        self.current_prediction = static_pred
+                        print(f"[Statico] Nessun movimento significativo")
                 else:
-                    print(f"[Statico] Nessun movimento")
+                    # Nessun movimento, mantieni statico
+                    self.current_prediction = static_pred
+                    print(f"[Statico] Nessun movimento rilevato")
                 
+                #reset buffer
                 self.sequence_buffer.clear()
-                return static_pred
+            
             else:
-                # Sequenza non completa
-                seq_len = len(self.sequence_buffer)
-                if seq_len % 10 == 0:  # Log ogni 10 frame
-                    print(f"[Accumulo] {seq_len}/30 frame")
+                #Sequenza non completa, usa statica
+                self.current_prediction = static_pred
                 return static_pred
+
         else:
-            # Nessun modello dinamico
+            #Lettera non ambigua o senza modello dinamico
+            self.current_prediction = static_pred
+            self.sequence_buffer.clear()  #Resetta se stava accumulando
             return static_pred
+
+        return self.current_prediction
 
 #Carico il modello
 #model_dict = pickle.load(open('./model.p','rb'))
 #model = model_dict['model']
 
-recognizer = HybridGestureRecognizer(
-    dynamic_model_path='./dynamic_models/gru_model.p'
-)
+recognizer = HybridGestureRecognizer()
 
 last_display_char = ""
 display_counter = 0
 HOLD_FRAMES = 40  # Mostra per 40 frame
 
 last_dynamic_char = ""
-dynamic_lock_frames = 40  # Blocca per 40 frame dopo una dinamica
+dynamic_lock_frames = 60  # Blocca per 60 frame dopo una dinamica
 dynamic_lock_counter = 0
 
 #Riconosce se c'è movimento nella sequenza
@@ -183,18 +130,14 @@ def analyze_movement(sequence_buffer):
     #(se le dita si muovono, la varianza sarà alta)
     position_variance = np.var(sequence_array, axis=0)
     
+    #prendi solo le coordinate X indici pari
+    x_variance = position_variance[::2]
+    
     #se la varianza media supera una soglia, c'è movimento
-    movement_threshold = 0.005  # Più alta = meno falsi positivi  
+    movement_threshold = 0.001  #Soglia empirica
+    mean_variance = np.mean(x_variance)
     
-    # Filtro migliore: controlla sia X che Y
-    xy_variance = np.var(sequence_array, axis=0)
-    mean_variance = np.mean(xy_variance)  # Media di TUTTE le features
-    
-    # Controlla anche il movimento specifico delle dita
-    finger_variance = np.var(sequence_array[:, [20,21,22,23]], axis=0)  # Dita
-    finger_movement = np.mean(finger_variance)
-    
-    return (mean_variance > movement_threshold and finger_movement > 0.0005), mean_variance
+    return mean_variance > movement_threshold
 
 while True:
 
@@ -250,11 +193,8 @@ while True:
 
         # Usa il riconoscitore IBRIDO (statico + dinamico automaticamente)
         if len(data_aux) == 42:
-
-            
             predicted_character = recognizer.predict(np.asarray(data_aux))
             
-
             # 1. Se abbiamo un blocco attivo per dinamica precedente
             if dynamic_lock_counter > 0:
                 dynamic_lock_counter -= 1
@@ -263,12 +203,12 @@ while True:
                 print(f"🔒 Mantengo dinamica: {last_dynamic_char} ({dynamic_lock_counter} frame rimasti)")
             
             # 2. Se è una NUOVA lettera dinamica
-            elif predicted_character in list(recognizer.dynamic_label_map.values()):
+            elif predicted_character in ['SJ', 'Z', 'z', 'SS', 'SG']:  # O lista tue dinamiche
                 last_dynamic_char = predicted_character
                 dynamic_lock_counter = dynamic_lock_frames
                 last_display_char = predicted_character
                 display_counter = HOLD_FRAMES
-                print(f"🎯 DINAMICA ({recognizer.model_type}): {predicted_character}")
+                print(f"🎯 NUOVA DINAMICA: {predicted_character} (blocco {dynamic_lock_frames} frame)")
                 final_char = predicted_character
             
             # 3. Se è una lettera statica E non siamo in blocco
