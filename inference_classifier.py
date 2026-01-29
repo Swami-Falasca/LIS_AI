@@ -4,6 +4,45 @@ import pickle
 import numpy as np
 from collections import deque
 
+<<<<<<< Updated upstream
+=======
+
+def flip_hand_landmarks(landmarks):
+    """Ribalta i landmarks della mano (destra ↔ sinistra)"""
+    if len(landmarks) == 42:  # 21 landmarks * (x,y)
+        # Per ogni coordinata x, calcola 1 - x (specchio)
+        flipped = []
+        for i in range(0, len(landmarks), 2):
+            x = 1 - landmarks[i]  # Ribalta coordinata x
+            y = landmarks[i + 1]  # Mantieni coordinata y
+            flipped.extend([x, y])
+        return np.array(flipped)
+    return landmarks
+
+# AGGIUNTA: Funzione per riconoscere entrambe le mani
+def normalize_for_both_hands(landmarks, predicted_character, recognizer):
+    """
+    Riconosce lettere fatte con entrambe le mani
+    Se registrata con destra, riconosce anche sinistra
+    """
+    ambidextrous_letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'k', 
+                           'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 
+                           'v', 'w', 'x', 'y', 'z', 'SJ', 'Z', 'SS', 'SG']
+    
+    if predicted_character and predicted_character in ambidextrous_letters:
+        flipped = flip_hand_landmarks(landmarks)
+        if len(flipped) == 42:
+            try:
+                flipped_prediction = recognizer.predict(np.asarray(flipped))
+                if flipped_prediction and flipped_prediction != predicted_character:
+                    if flipped_prediction in ambidextrous_letters:
+                        return flipped_prediction
+            except:
+                pass
+    
+    return predicted_character
+
+>>>>>>> Stashed changes
 #se non va provare 1, 2...
 #cap = cv2.VideoCapture(0)
 #dovrebbe essere una nuova versione
@@ -157,6 +196,8 @@ while True:
     if results.multi_hand_landmarks:
         # 1. Prima disegniamo TUTTE le mani
         for hand_landmarks in results.multi_hand_landmarks:
+<<<<<<< Updated upstream
+=======
             mp_drawing.draw_landmarks(
                     frame, #image to draw
                     hand_landmarks, #model output
@@ -164,6 +205,28 @@ while True:
                     mp_drawing_styles.get_default_hand_landmarks_style(),
                     mp_drawing_styles.get_default_hand_connections_style()
             )
+        
+        # Prendiamo solo la PRIMA mano per la predizione
+        # (per evitare problemi con 84 features invece di 42)
+        first_hand = results.multi_hand_landmarks[0]
+        data_aux = []
+        x_ = []
+        y_ = []
+
+        hand_predictions = []  # <-- RIMOSSO if results.multi_hand_landmarks: QUI
+        
+        # Processa OGNI mano trovata
+        for hand_idx, hand_landmarks in enumerate(results.multi_hand_landmarks):
+            # Disegna landmarks per questa mano
+>>>>>>> Stashed changes
+            mp_drawing.draw_landmarks(
+                    frame, #image to draw
+                    hand_landmarks, #model output
+                    mp_hands.HAND_CONNECTIONS, #hand connections
+                    mp_drawing_styles.get_default_hand_landmarks_style(),
+                    mp_drawing_styles.get_default_hand_connections_style()
+            )
+<<<<<<< Updated upstream
         
         # Prendiamo solo la PRIMA mano per la predizione
         # (per evitare problemi con 84 features invece di 42)
@@ -195,6 +258,95 @@ while True:
         if len(data_aux) == 42:
             predicted_character = recognizer.predict(np.asarray(data_aux))
             
+=======
+            
+            # Estrai landmarks per questa mano
+            data_aux = []
+            x_ = []
+            y_ = []
+            
+            for i in range(len(hand_landmarks.landmark)):
+                x = hand_landmarks.landmark[i].x
+                y = hand_landmarks.landmark[i].y
+                data_aux.append(x)
+                data_aux.append(y)
+                x_.append(x)
+                y_.append(y)
+            
+            # Calcola bounding box per questa mano
+            x1 = int(min(x_) * W) - 10
+            y1 = int(min(y_) * H) - 10
+            x2 = int(max(x_) * W) + 10
+            y2 = int(max(y_) * H) + 10
+            
+            # Se abbiamo 42 features (21 landmarks)
+            if len(data_aux) == 42:
+                # PRIMA: Prova con mano originale
+                predicted_original = recognizer.predict(np.asarray(data_aux))
+                
+                # SECONDA: Prova con mano ribaltata (destra ↔ sinistra)
+                flipped_landmarks = flip_hand_landmarks(data_aux)
+                predicted_flipped = recognizer.predict(flipped_landmarks)
+                
+                # Scegli la predizione con confidenza più alta
+                # (qui assumiamo che predict() restituisca anche confidenza)
+                # Se il tuo modello non dà confidenza, usa predicted_original
+                
+                # Per ora usiamo la predizione originale
+                predicted_character = predicted_original
+                
+                # AGGIUNTA: Riconoscimento per entrambe le mani
+                predicted_character = normalize_for_both_hands(data_aux, predicted_character, recognizer)
+                
+                # Memorizza per questa mano
+                hand_predictions.append({
+                    'hand_idx': hand_idx,
+                    'bbox': (x1, y1, x2, y2),
+                    'prediction': predicted_character,
+                    'landmarks': data_aux
+                })
+        
+        # Ora processa le predizioni di tutte le mani
+        # Gestione blocco dinamico e display...
+        # (mantieni la tua logica esistente ma applicata a ogni mano)
+        
+        # Esempio: mostra predizione per ogni mano
+        for hand_info in hand_predictions:
+            x1, y1, x2, y2 = hand_info['bbox']
+            pred_char = hand_info['prediction']
+            
+            # Usa la tua logica esistente per final_char, display_counter, ecc.
+            # (questa parte dipende da come vuoi gestire multiple mani)
+            
+            # Per semplicità, mostra ogni mano con la sua predizione
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
+            cv2.putText(frame, f"M{hand_info['hand_idx']}: {pred_char}", 
+                       (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
+        
+        #Creiamo array da landmarks della PRIMA mano
+        for i in range(len(first_hand.landmark)):
+            #x,y,z posizioni dei landmarks
+            #a noi servono solo x e y
+            #print(hand_landmarks.landmark[i])
+            x = first_hand.landmark[i].x
+            y = first_hand.landmark[i].y
+            data_aux.append(x)
+            data_aux.append(y)
+            x_.append(x)  # Solo prima mano
+            y_.append(y)  # Solo prima mano
+
+      
+        #questi sono i bordi del rettangolo che contengono la mano
+        x1 = int(min(x_) * W) - 10  # -10 per margine
+        y1 = int(min(y_) * H) - 10
+        x2 = int(max(x_) * W) + 10
+        y2 = int(max(y_) * H) + 10
+
+        # Usa il riconoscitore IBRIDO (statico + dinamico automaticamente)
+        if len(data_aux) == 42:
+            predicted_character = recognizer.predict(np.asarray(data_aux))
+            
+>>>>>>> Stashed changes
             # 1. Se abbiamo un blocco attivo per dinamica precedente
             if dynamic_lock_counter > 0:
                 dynamic_lock_counter -= 1
