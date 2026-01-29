@@ -11,6 +11,9 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 
+#Metriche
+from sklearn.metrics import classification_report, confusion_matrix
+
 data_dict = pickle.load(open('./data.pickle','rb'))
 
 #NB i nostri dati sono il liste, quindi li convertiamo in np
@@ -59,6 +62,19 @@ model.fit(x_train, y_train)
 y_predict = model.predict(x_test)
 
 score = accuracy_score(y_predict, y_test)
+print("Classification Report:")
+print(classification_report(y_test, y_predict, target_names=np.unique(labels)))
+
+# Salva anche le performance
+with open('model_performance.pkl', 'wb') as f:
+    pickle.dump({
+        'model': model,
+        'accuracy': score,
+        'y_test': y_test,
+        'y_predict': y_predict,
+        'labels': np.unique(labels)
+    }, f)
+
 
 print('{}% of samples were classified correctly!'.format(score * 100))
 
