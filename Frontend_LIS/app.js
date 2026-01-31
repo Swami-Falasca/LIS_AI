@@ -1,14 +1,22 @@
+const BACKEND_URL = 'http://127.0.0.1:5000';
+let recognitionActive = false;
+let eventSource = null;
+let canvasContext = null;
+let canvas = null;
+let frameCaptureInterval = null;
+
 // Stato applicazione
 let appState = {
     isRunning: false,
-    isDemo: true,
+    isDemo: false,
     signsCount: 0,
     startTime: null,
     timerInterval: null,
     history: [],
     webcamStream: null,
     fps: 0,
-    lastFrameTime: 0
+    lastFrameTime: 0,
+    frameCount: 0 
 };
 
 // Elementi DOM
@@ -40,6 +48,12 @@ const lisLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 // Inizializzazione
 function init() {
+
+    // Inizializza connection status se esiste
+    if (elements.connectionStatus) {
+        updateConnectionStatus('Disconnesso', '#ef4444');
+    }
+
     setupEventListeners();
     updateUI();
     console.log('LIS AI Demo inizializzato');
@@ -53,7 +67,7 @@ function setupEventListeners() {
     elements.btnTest.addEventListener('click', simulateRecognition);
 }
 
-// Avvia riconoscimento (demo)
+// Avvia riconoscimento
 async function startRecognition() {
     if (appState.isRunning) return;
     
@@ -70,6 +84,14 @@ async function startRecognition() {
         
         elements.webcam.srcObject = stream;
         appState.webcamStream = stream;
+        
+        // Crea canvas per catturare frame
+        canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 480;
+        canvasContext = canvas.getContext('2d');
+        
+        // Mostra webcam
         elements.webcam.style.display = 'block';
         elements.videoPlaceholder.style.display = 'none';
         
@@ -78,6 +100,7 @@ async function startRecognition() {
         appState.startTime = Date.now();
         appState.signsCount = 0;
         appState.history = [];
+        appState.frameCount = 0;
         
         // Avvia timer
         startSessionTimer();
@@ -85,21 +108,237 @@ async function startRecognition() {
         // Avvia FPS counter
         requestAnimationFrame(updateFPS);
         
-        // Simula riconnessione backend
-        simulateBackendConnection();
+        // Prova a connettersi al backend
+        const backendConnected = await connectToBackend();
+        
+        if (backendConnected && !appState.isDemo) {
+            console.log('Modalità backend attiva');
+            // Avvia invio frame al backend ogni 200ms (5 FPS)
+            frameCaptureInterval = setInterval(() => {
+                captureAndSendFrame();
+            }, 200);
+        } else {
+            console.log('Modalità demo attiva');
+            // Per demo, simula riconoscimento ogni 2 secondi
+            frameCaptureInterval = setInterval(() => {
+                if (Math.random() > 0.7) { // 30% di probabilità
+                    simulateRecognition();
+                }
+            }, 2000);
+        }
         
         updateUI();
         console.log('Riconoscimento avviato');
         
     } catch (error) {
-        console.error('Errore accesso webcam:', error);
-        alert('Impossibile accedere alla webcam. Controlla i permessi.');
+        console.error('Errore:', error);
+        alert('Impossibile avviare il riconoscimento: ' + error.message);
     }
+}
+
+// Cattura e invia un singolo frame
+function captureAndSendFrame() {
+    if (!appState.isRunning || !canvasContext || appState.isDemo) return;
+    
+    try {
+        // Disegna frame corrente su canvas
+        canvasContext.drawImage(elements.webcam, 0, 0, 640, 480);
+        
+        // Converti in base64 (qualità ridotta per performance)
+        const frameData = canvas.toDataURL('image/jpeg', 0.5);
+        
+        // Invia al backend
+        sendFrameToBackend(frameData);
+        
+    } catch (error) {
+        console.error('Errore cattura frame:', error);
+    }
+}
+
+// Connessione al backend
+async function connectToBackend() {
+    try {
+        console.log('Tentativo di connessione al backend...');
+        
+        // Test connessione
+        const response = await fetch(`${BACKEND_URL}/api/status`);
+        const data = await response.json();
+        
+        if (data.status === 'online') {
+            console.log('Backend online, modello dinamico:', data.dynamic_model);
+            
+            // Aggiorna stato connessione
+            updateConnectionStatus('Connesso', '#10b981');
+            
+            // Connessione SSE per risultati in tempo reale
+            eventSource = new EventSource(`${BACKEND_URL}/api/stream`);
+            
+            eventSource.onopen = () => {
+                console.log('Connessione SSE stabilita');
+                updateConnectionStatus('Connesso', '#10b981');
+            };
+            
+            eventSource.onmessage = (event) => {
+                try {
+                    const result = JSON.parse(event.data);
+                    
+                    // Ignora heartbeat
+                    if (result.type === 'heartbeat') {
+                        return;
+                    }
+                    
+                    console.log('Ricevuto risultato SSE:', result);
+                    handleRecognitionResult({
+                        letter: result.letter,
+                        confidence: 90, // Default
+                        timestamp: new Date().toLocaleTimeString()
+                    });
+                } catch (e) {
+                    console.error('Errore parsing SSE:', e);
+                }
+            };
+            
+            eventSource.onerror = (error) => {
+                console.error('SSE Error:', error);
+                updateConnectionStatus('Errore connessione', '#ef4444');
+                // Prova a riconnettersi
+                if (eventSource.readyState === EventSource.CLOSED) {
+                    console.log('SSE chiuso, tentativo riconnessione...');
+                    setTimeout(connectToBackend, 3000);
+                }
+            };
+            
+            return true;
+        }
+    } catch (error) {
+        console.error('Errore connessione backend:', error);
+        updateConnectionStatus('Disconnesso', '#ef4444');
+        
+        // Modalità demo fallback
+        appState.isDemo = true;
+        console.log('Backend non disponibile. Modalità demo attivata.');
+        return false;
+    }
+    return false;
+}
+
+// Funzione helper per aggiornare lo stato connessione
+function updateConnectionStatus(text, color) {
+    if (elements.connectionStatus) {
+        const statusText = elements.connectionStatus.querySelector('.status-text');
+        const statusDot = elements.connectionStatus.querySelector('.status-dot');
+        
+        if (statusText) statusText.textContent = text;
+        if (statusDot) statusDot.style.backgroundColor = color;
+        
+        // Aggiorna classi CSS
+        elements.connectionStatus.className = 'connection-status';
+        if (color === '#10b981') {
+            elements.connectionStatus.classList.add('connected');
+        } else if (color === '#ef4444') {
+            elements.connectionStatus.classList.add('error');
+        }
+    }
+    
+    // Aggiorna anche webcamStatus
+    if (elements.webcamStatus) {
+        if (text === 'Connesso') {
+            elements.webcamStatus.textContent = 'Riconoscimento attivo';
+            elements.webcamStatus.style.borderColor = '#10b981';
+            elements.webcamStatus.style.color = '#10b981';
+            elements.webcamStatus.style.background = 'rgba(16, 185, 129, 0.1)';
+        } else {
+            elements.webcamStatus.textContent = 'In attesa di connessione...';
+            elements.webcamStatus.style.borderColor = '#fbbf24';
+            elements.webcamStatus.style.color = '#fbbf24';
+            elements.webcamStatus.style.background = 'rgba(251, 191, 36, 0.1)';
+        }
+    }
+}
+
+// Cattura e invia frame al backend
+function captureAndSendFrames() {
+    if (!recognitionActive || !canvasContext) return;
+    
+    // Disegna frame corrente su canvas
+    canvasContext.drawImage(elements.webcam, 0, 0, 640, 480);
+    
+    // Converti in base64
+    const frameData = canvas.toDataURL('image/jpeg', 0.7);
+    
+    // Invia al backend (ogni 3 frame per ridurre carico)
+    if (appState.frameCount % 3 === 0) {
+        sendFrameToBackend(frameData);
+    }
+    
+    appState.frameCount++;
+    
+    // Continua cattura
+    if (recognitionActive) {
+        setTimeout(captureAndSendFrames, 100); // 10 FPS
+    }
+}
+
+// Invia frame al backend
+async function sendFrameToBackend(frameData) {
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/predict`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ frame: frameData })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            if (result.letter && !result.error) {
+                handleRecognitionResult(result);
+            }
+        }
+    } catch (error) {
+        // Silenzioso, potrebbe essere normale se SSE è attivo
+    }
+}
+
+// Gestisci risultato riconoscimento
+function handleRecognitionResult(result) {
+    // Aggiorna contatori
+    appState.signsCount++;
+    
+    // Aggiungi alla cronologia
+    const recognition = {
+        letter: result.letter,
+        confidence: result.confidence * 100, // Converti in percentuale
+        timestamp: new Date().toLocaleTimeString()
+    };
+    
+    appState.history.unshift(recognition);
+    if (appState.history.length > 12) {
+        appState.history.pop();
+    }
+    
+    // Mostra risultato
+    showRecognitionResult(recognition);
+    updateUI();
 }
 
 // Ferma riconoscimento
 function stopRecognition() {
     if (!appState.isRunning) return;
+    
+    // Ferma cattura frame
+    recognitionActive = false;
+    
+    // Ferma intervallo frame capture
+    if (frameCaptureInterval) {
+        clearInterval(frameCaptureInterval);
+        frameCaptureInterval = null;
+    }
+
+    // Chiudi connessione SSE
+    if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+    }
     
     // Ferma webcam
     if (appState.webcamStream) {
@@ -107,23 +346,23 @@ function stopRecognition() {
         appState.webcamStream = null;
     }
     
+    // Reset stato
     elements.webcam.style.display = 'none';
     elements.videoPlaceholder.style.display = 'flex';
     
-    // Ferma timer
     if (appState.timerInterval) {
         clearInterval(appState.timerInterval);
         appState.timerInterval = null;
     }
     
-    // Aggiorna stato
     appState.isRunning = false;
-    appState.connectionStatus = 'Disconnesso';
+    elements.connectionStatus.textContent = 'Disconnesso';
     
     updateUI();
     console.log('Riconoscimento fermato');
 }
 
+/*
 // Simula riconoscimento (demo)
 function simulateRecognition() {
     if (!appState.isRunning) {
@@ -157,7 +396,7 @@ function simulateRecognition() {
     updateUI();
     
     console.log(`Simulato riconoscimento: ${randomLetter} (${confidence.toFixed(1)}%)`);
-}
+}*/
 
 // Mostra risultato del riconoscimento
 function showRecognitionResult(result) {
