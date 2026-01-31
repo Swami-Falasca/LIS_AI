@@ -46,6 +46,28 @@ const elements = {
 // Lettere LIS per demo
 const lisLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
+//validare la confidence
+function validateConfidence(confidence){
+    if(confidence===undefined||confidence===null){
+        console.warn('Confidence non fornita, usando default 50%');
+        return 50;
+    }
+    //convertire in numero
+    const confNum=parseFLoat(confidence);
+
+    if(isNaN(confNum)){
+        console.warn('Confidence non valida:"${confidence}", usando default 50%');
+        return 50;
+    }
+    // Se è in formato 0-1, converti
+    if (confNum <= 1.0 && confNum >= 0) {
+        return Math.round(confNum * 100);
+    }
+    
+    // Se è già 0-100, limita e arrotonda
+    return Math.min(100, Math.max(0, Math.round(confNum)));
+}
+
 // Inizializzazione
 function init() {
 
@@ -190,7 +212,7 @@ async function connectToBackend() {
                     console.log('Ricevuto risultato SSE:', result);
                     handleRecognitionResult({
                         letter: result.letter,
-                        confidence: 90, // Default
+                        confidence: result.confidence ||0, //viene preso dal backend
                         timestamp: new Date().toLocaleTimeString()
                     });
                 } catch (e) {
@@ -291,7 +313,11 @@ async function sendFrameToBackend(frameData) {
         if (response.ok) {
             const result = await response.json();
             if (result.letter && !result.error) {
-                handleRecognitionResult(result);
+                handleRecognitionResult({
+                    letter:result.letter,
+                    confidence: result.confidence || result.probability ||0,
+                    timestamp: new Date().toLocaleTimeString()
+                })
             }
         }
     } catch (error) {
@@ -301,13 +327,21 @@ async function sendFrameToBackend(frameData) {
 
 // Gestisci risultato riconoscimento
 function handleRecognitionResult(result) {
+    let confidence= result.onfidence|| 0;
+
+    //se confidence è 0-1 converti in percentuale
+    if(confidence<=1.0){
+    confidence=Math.round(confidence*100);
+}
+//limita tra 0 e 100
+confidence= Math.min(100, Math.max(0, confidence));
     // Aggiorna contatori
     appState.signsCount++;
     
     // Aggiungi alla cronologia
     const recognition = {
         letter: result.letter,
-        confidence: result.confidence * 100, // Converti in percentuale
+        confidence:confidence, 
         timestamp: new Date().toLocaleTimeString()
     };
     
