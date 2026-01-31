@@ -3,29 +3,35 @@ import pickle #salvare dataset ecc
 import mediapipe as mp
 import cv2
 import matplotlib.pyplot as plt
+import numpy as np
 
 #py -3.10 -m pip install mediapipe==0.10.7
 #PER INSTALLARE CORRETTA VERSIONE MEDIAPIPE CON PYTHON 3.10
 
 #Per cambiare versione di python: ctrl+shift+p, select interpreter
 
-#cd "C:\Users\isabe\OneDrive\Desktop\FIA" per direcotry corretta
+# Funzioni di supporto
+def flip_hand_sequence(sequence):
+    """Ribalta sequenza landmarks"""
+    flipped_aux = []
+    for i in range(0, len(data_aux), 2):
+        x = 1.0 - data_aux[i]  # Ribalta X
+        y = data_aux[i + 1]
+        flipped_aux.extend([x, y])
+    return flipped_aux
 
-def normalize_landmarks(landmarks):
-    """Normalizza landmarks rispetto al polso (punto 0)"""
-
-    if len(landmarks) == 0:
-        return landmarks  # Restituisce lista vuota se nessun landmark
-
-    wrist_x = landmarks[0]  # x polso
-    wrist_y = landmarks[1]  # y polso
+def preprocess_sequence(landmarks):
+    """Normalizza landmarks per gesti statici"""
+    if len(landmarks) < 2:
+        return landmarks
+    
+    wrist_x = landmarks[0]
+    wrist_y = landmarks[1]
     
     normalized = []
     for i in range(0, len(landmarks), 2):
-        # Normalizza rispetto al polso
-        norm_x = landmarks[i] - wrist_x
-        norm_y = landmarks[i+1] - wrist_y
-        normalized.extend([norm_x, norm_y])
+        normalized.append(landmarks[i] - wrist_x)
+        normalized.append(landmarks[i+1] - wrist_y)
     
     return normalized
 
@@ -60,55 +66,31 @@ for dir_ in os.listdir(DATA_DIR): #Itero nella directory
                 #Creiamo array da landmarks
                 for i in range(len(hand_landmarks.landmark)):
                     #x,y,z posizioni dei landmarks
-                    #a noi servono solo x e y
-                    #print(hand_landmarks.landmark[i])
+                    #A noi servono solo x e y
                     x = hand_landmarks.landmark[i].x
                     y = hand_landmarks.landmark[i].y
                     data_aux.append(x)
                     data_aux.append(y)
 
 
-            if data_aux:  # Solo se abbiamo landmarks
-                # Normalizzazione dei landmarks
-                normalized_data = normalize_landmarks(data_aux)
+            if data_aux:
+                #Normalizzazione
+                processed_data = preprocess_sequence(data_aux)
 
-                #così facendo creo il dataset
-                data.append(normalized_data) #salvo tutti gli array con le coordinate nell'array di dati
+                #Così facendo creo il dataset
+                data.append(processed_data) #salvo tutti gli array con le coordinate nell'array di dati
                 labels.append(dir_)
 
-                # Aggiungi dati FLIPPATI (data augmentation)
-                flipped_aux = []
-                for i in range(0, len(data_aux), 2):
-                    x = 1.0 - data_aux[i]  # Ribalta X
-                    y = data_aux[i + 1]
-                    flipped_aux.extend([x, y])
+                #Aggiungi dati FLIPPATI (data augmentation)
+                flipped_seq = flip_hand_sequence(processed_data)
             
-                # Normalizza anche i dati flippati
-                normalized_flipped = normalize_landmarks(flipped_aux)
+                #Normalizza anche i dati flippati
+                normalized_flipped = preprocess_sequence(flipped_seq)
                 data.append(normalized_flipped)
                 labels.append(dir_)
 
-                #Landmarks (dimostrazione)
-            '''
-                per ogni risultato disegnamo i landmarks
-                mp_drawing.draw_landmarks(
-                    img_rgb, #image to draw
-                    hand_landmarks, #model output
-                    mp_hands.HAND_CONNECTIONS, #hand connections
-                    mp_drawing_styles.get_default_hand_landmarks_style(),
-                    mp_drawing_styles.get_default_hand_connections_style()
-                )
- 
-                '''
         else:
-            print(f"⚠️ Nessuna mano rilevata in {dir_}/{img_path}")
-'''
-Per mostrare le immagini
-        plt.figure()
-        plt.imshow(img_rgb)
-
-plt.show()
-'''
+            print(f"Nessuna mano rilevata in {dir_}/{img_path}")
 
 #Costruiremo un classificatore con queste informazioni
 print(f"Dataset creato: {len(data)} campioni, {len(set(labels))} classi")
