@@ -42,7 +42,17 @@ body {
     font-size: 2.5rem;
     color: #377bda;
 }
-
+.logo-img {
+    width: 100px; /* Leggermente più grande per visibilità */
+    height: 75px;
+    border-radius: 13px;
+    object-fit: contain;
+    border: solid 2px #225982   ;
+    transition: transform 0.3s ease;
+    margin-right: 60px;
+    background-color: #225982;
+     margin-top: 20px; ;  
+}
 .logo h1 {
     font-size: 2.2rem;
     font-weight: 700;
@@ -533,4 +543,3 @@ body {
 .slide-in {
     animation: slideIn 0.5s ease forwards;
 }
-
