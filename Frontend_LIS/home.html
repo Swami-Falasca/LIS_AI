@@ -9,6 +9,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Aggiungi nel tuo HTML -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 </head>
 <body>
     <div class="container">
@@ -18,7 +22,13 @@
                 <img src="images/logo.png" class="logo-img" alt="LIS AI Logo">
                 <h1>Riconoscimento Linguaggio dei Segni</h1>
             </div>
-            <p class="subtitle">Sistema di interpretazione AI in tempo reale</p>
+            <div class="header-right">
+                <p class="subtitle">Sistema di interpretazione AI in tempo reale</p>
+                <div class="connection-status" id="connection-status">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Disconnesso</span>
+                </div>
+            </div>
         </header>
 
         <!-- STATUS BAR -->
@@ -56,6 +66,7 @@
                 </div>
                 <div class="video-container">
                     <video id="webcam" autoplay muted playsinline></video>
+                    <canvas id="output-canvas" class="landmarks-canvas"></canvas>
                     <div class="video-placeholder" id="video-placeholder">
                         <i class="fas fa-video-slash"></i>
                         <p>Premi "Avvia" per iniziare</p>

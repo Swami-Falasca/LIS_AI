@@ -151,19 +151,26 @@ def process_frame(frame, recognizer, hands):
             x2 = int(max(x_) * W) + 10
             y2 = int(max(y_) * H) + 10
             
+            landmarks_pixels = []
+            for i in range(0, len(data_aux), 2):
+                landmarks_pixels.append({
+                    'x': int(data_aux[i] * W),
+                    'y': int(data_aux[i+1] * H)
+                })
+
             return {
-                'letter': predicted_character,
-                'bbox': (x1, y1, x2, y2),
-                'landmarks': data_aux,
-                'has_hand': True
-            }
+            'letter': predicted_character,
+            'bbox': [x1, y1, x2, y2], # Usiamo una lista [] invece di tupla () per JSON
+            'landmarks': landmarks_pixels, # Inviamo la lista di oggetti x,y
+            'has_hand': True
+        }
     
     return {
-        'letter': '',
-        'bbox': None,
-        'landmarks': None,
-        'has_hand': False
-    }
+            'letter': predicted_character,
+            'bbox': [x1, y1, x2, y2], # Usiamo una lista [] invece di tupla () per JSON
+            'landmarks': landmarks_pixels, # Inviamo la lista di oggetti x,y
+            'has_hand': True
+        }
 
 def main():
     """Funzione principale per eseguire il riconoscimento standalone"""

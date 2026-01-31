@@ -177,6 +177,14 @@ body {
 }
 
 /* ===== VIDEO PANEL ===== */
+.video-wrapper {
+    position: relative;
+    width: 640px;   /* Forza la larghezza */
+    height: 480px;  /* Forza l'altezza */
+    margin: 0 auto;
+    background: #000;
+}
+
 .video-container {
     position: relative;
     width: 100%;
@@ -188,9 +196,20 @@ body {
     border: 2px solid #475569;
 }
 
+#webcam, #output-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 640px;  /* Non usare 100% */
+    height: 480px; /* Non usare 100% */
+}
+
+#output-canvas {
+    z-index: 10; /* Deve stare sopra il video */
+    pointer-events: none; /* Permette di cliccare "attraverso" il canvas se serve */
+}
+
 #webcam {
-    width: 100%;           
-    height: 100%;
     object-fit: contain;   
     display: none;         
     background-color: #000;

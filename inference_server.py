@@ -88,9 +88,10 @@ def predict():
             
             response = {
                 'letter': result['letter'],
-                'confidence': 0.95,  # Puoi calcolare confidenza reale se disponibile
+                'confidence': 0.95,
                 'has_hand': True,
-                'bbox': result['bbox'],
+                'bbox': result['bbox'], # [x_min, y_min, x_max, y_max]
+                'landmarks': result.get('landmarks', []), # Assicurati che process_frame restituisca i punti!
                 'timestamp': time.time()
             }
         else:

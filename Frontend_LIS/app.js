@@ -40,11 +40,60 @@ const elements = {
     confidenceValue: document.getElementById('confidence-value'),
     historyList: document.getElementById('history-list'),
     historyPlaceholder: document.getElementById('history-placeholder'),
+    outputCanvas: document.getElementById('output-canvas'),
     connectionStatus: document.getElementById('connection-status')
 };
 
 // Lettere LIS per demo
-const lisLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+// Mappa standard delle connessioni della mano
+const HAND_CONNECTIONS = [
+    [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
+    [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15],
+    [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]
+];
+
+function drawHandLandmarks(result) {
+    const ctx = elements.outputCanvas.getContext('2d');
+    ctx.clearRect(0, 0, elements.outputCanvas.width, elements.outputCanvas.height);
+
+    if (!result.has_hand || !result.landmarks) return;
+
+    const landmarks = result.landmarks;
+
+    // 1. Disegna i VETTORI (Linee)
+    ctx.strokeStyle = "#10b981"; // Verde
+    ctx.lineWidth = 3;
+    HAND_CONNECTIONS.forEach(([startIdx, endIdx]) => {
+        const start = landmarks[startIdx];
+        const end = landmarks[endIdx];
+        if (start && end) {
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            ctx.lineTo(end.x, end.y);
+            ctx.stroke();
+        }
+    });
+
+    // 2. Disegna i PUNTI (Landmarks)
+    landmarks.forEach((point, index) => {
+        // Colore originale: bianco con bordo nero, rosso per le punte
+        ctx.fillStyle = (index % 4 === 0 && index !== 0) ? "#ff4444" : "#ffffff";
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    });
+
+    // 3. Disegna il RETTANGOLO
+    if (result.bbox) {
+        const [x1, y1, x2, y2] = result.bbox;
+        ctx.strokeStyle = "#fbbf24"; // Giallo
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+    }
+}
 
 //validare la confidence
 function validateConfidence(confidence){
@@ -107,6 +156,13 @@ async function startRecognition() {
         elements.webcam.srcObject = stream;
         appState.webcamStream = stream;
         
+        elements.webcam.onloadedmetadata = () => {
+    // Forza le dimensioni esatte per far combaciare i punti
+        elements.outputCanvas.width = 640;
+        elements.outputCanvas.height = 480;
+        console.log("Canvas dimensionato a 640x480");
+        };
+
         // Crea canvas per catturare frame
         canvas = document.createElement('canvas');
         canvas.width = 640;
@@ -312,16 +368,21 @@ async function sendFrameToBackend(frameData) {
         
         if (response.ok) {
             const result = await response.json();
+            
+            // --- AGGIUNTA QUI: Disegna i landmark ---
+            drawHandLandmarks(result); 
+            // ----------------------------------------
+
             if (result.letter && !result.error) {
                 handleRecognitionResult({
-                    letter:result.letter,
-                    confidence: result.confidence || result.probability ||0,
+                    letter: result.letter,
+                    confidence: result.confidence || 0,
                     timestamp: new Date().toLocaleTimeString()
-                })
+                });
             }
         }
     } catch (error) {
-        // Silenzioso, potrebbe essere normale se SSE è attivo
+        console.error("Errore fetch:", error);
     }
 }
 
