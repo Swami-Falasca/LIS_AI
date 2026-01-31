@@ -11,6 +11,25 @@ import matplotlib.pyplot as plt
 
 #cd "C:\Users\isabe\OneDrive\Desktop\FIA" per direcotry corretta
 
+def normalize_landmarks(landmarks):
+    """Normalizza landmarks rispetto al polso (punto 0)"""
+
+    if len(landmarks) == 0:
+        return landmarks  # Restituisce lista vuota se nessun landmark
+
+    wrist_x = landmarks[0]  # x polso
+    wrist_y = landmarks[1]  # y polso
+    
+    normalized = []
+    for i in range(0, len(landmarks), 2):
+        # Normalizza rispetto al polso
+        norm_x = landmarks[i] - wrist_x
+        norm_y = landmarks[i+1] - wrist_y
+        normalized.extend([norm_x, norm_y])
+    
+    return normalized
+
+
 #Detect and draw landmarks sulle immagini per la classificazione
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
@@ -27,6 +46,7 @@ labels = [] #categorie per ogni dato
 for dir_ in os.listdir(DATA_DIR): #Itero nella directory
     for img_path in os.listdir(os.path.join(DATA_DIR, dir_)):
         data_aux = []
+
         img = cv2.imread(os.path.join(DATA_DIR, dir_, img_path))
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
@@ -47,19 +67,26 @@ for dir_ in os.listdir(DATA_DIR): #Itero nella directory
                     data_aux.append(x)
                     data_aux.append(y)
 
-            #così facendo creo il dataset
-            data.append(data_aux) #salvo tutti gli array con le coordinate nell'array di dati
-            labels.append(dir_)
 
-            # Aggiungi dati FLIPPATI (data augmentation)
-            flipped_aux = []
-            for i in range(0, len(data_aux), 2):
-                x = 1.0 - data_aux[i]  # Ribalta X
-                y = data_aux[i + 1]
-                flipped_aux.extend([x, y])
+            if data_aux:  # Solo se abbiamo landmarks
+                # Normalizzazione dei landmarks
+                normalized_data = normalize_landmarks(data_aux)
+
+                #così facendo creo il dataset
+                data.append(normalized_data) #salvo tutti gli array con le coordinate nell'array di dati
+                labels.append(dir_)
+
+                # Aggiungi dati FLIPPATI (data augmentation)
+                flipped_aux = []
+                for i in range(0, len(data_aux), 2):
+                    x = 1.0 - data_aux[i]  # Ribalta X
+                    y = data_aux[i + 1]
+                    flipped_aux.extend([x, y])
             
-            data.append(flipped_aux)
-            labels.append(dir_)
+                # Normalizza anche i dati flippati
+                normalized_flipped = normalize_landmarks(flipped_aux)
+                data.append(normalized_flipped)
+                labels.append(dir_)
 
                 #Landmarks (dimostrazione)
             '''
@@ -73,7 +100,8 @@ for dir_ in os.listdir(DATA_DIR): #Itero nella directory
                 )
  
                 '''
-
+        else:
+            print(f"⚠️ Nessuna mano rilevata in {dir_}/{img_path}")
 '''
 Per mostrare le immagini
         plt.figure()
@@ -83,6 +111,13 @@ plt.show()
 '''
 
 #Costruiremo un classificatore con queste informazioni
+print(f"Dataset creato: {len(data)} campioni, {len(set(labels))} classi")
+print(f"Classi: {set(labels)}")
+
 f = open('data.pickle', 'wb') #da libreria pickle
 pickle.dump({'data':data, 'labels':labels}, f)
 f.close()
+
+print("Dataset salvato in data.pickle")
+
+
