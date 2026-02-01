@@ -3,6 +3,7 @@ import mediapipe as mp
 import pickle
 import numpy as np
 from collections import deque
+import time
 
 #Esattamente come in create dataset
 #Detect and draw landmarks sulle immagini per la classificazione
@@ -39,7 +40,8 @@ class HybridGestureRecognizer:
     def __init__(self):
         # Carica modello statico
         self.static_model = pickle.load(open('./model.p','rb'))['model']
-        
+        self.lock_until = 0
+
         # Prova a caricare modello dinamico (se esiste)
         try:
             with open('./dynamic_models/lstm_model.p', 'rb') as f:
@@ -62,6 +64,9 @@ class HybridGestureRecognizer:
     def predict(self, landmarks):
         """Predice usando entrambi i modelli automaticamente"""
         
+        if time.time() < self.lock_until:
+            return self.current_prediction
+
         # 1. Prova modello statico
         static_pred = self.static_model.predict([landmarks])[0]
         
@@ -84,12 +89,16 @@ class HybridGestureRecognizer:
                     dynamic_pred_idx = np.argmax(dynamic_pred_proba[0])
                     dynamic_pred = self.dynamic_label_map[dynamic_pred_idx]
                     
+                    # Blocca tutto per 800ms
+                    self.lock_until = time.time() + 0.8
+
                     #Controlla confidence
                     confidence = np.max(dynamic_pred_proba[0])
                     
                     #Se confidence alta (>80%) e diversa da statica, usa dinamica
                     if confidence > 0.8 and dynamic_pred != static_pred:
                         self.current_prediction = dynamic_pred
+                        self.lock_until = time.time() + 1.0 # BLOCCA per 1 secondo
                         print(f"[Dinamico] Riconosciuto: {dynamic_pred} (confidence: {confidence:.1%})")
                     else:
                         self.current_prediction = static_pred
@@ -117,40 +126,38 @@ class HybridGestureRecognizer:
 
 #Pocessa frame senza avviare il ciclo while
 def process_frame(frame, recognizer, hands):
-    """Processa un singolo frame e restituisce la predizione"""
+    """Processa un singolo frame e restituisce la predizione corretta"""
     H, W, _ = frame.shape
-    
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    
-    #Detect all the landmarks in this image
     results = hands.process(frame_rgb)
     
+    # Inizializza valori di default per il caso "nessuna mano"
+    response = {
+        'letter': '',
+        'bbox': [0, 0, 0, 0],
+        'landmarks': [],
+        'has_hand': False,
+        'confidence': 0.0
+    }
+    
     if results.multi_hand_landmarks:
-        #Solo la prima mano per la predizione
         first_hand = results.multi_hand_landmarks[0]
         data_aux = []
-        x_ = []
-        y_ = []
+        x_pts = []
+        y_pts = []
         
-        #Creiamo array da landmarks della PRIMA mano
         for i in range(len(first_hand.landmark)):
             x = first_hand.landmark[i].x
             y = first_hand.landmark[i].y
             data_aux.append(x)
             data_aux.append(y)
-            x_.append(x)
-            y_.append(y) 
+            x_pts.append(x)
+            y_pts.append(y) 
         
-        #Usa il riconoscitore ibrido
         if len(data_aux) == 42:
             predicted_character = recognizer.predict(np.asarray(data_aux))
             
-            #questi sono i bordi del rettangolo che contengono la mano
-            x1 = int(min(x_) * W) - 10  # -10 per margine
-            y1 = int(min(y_) * H) - 10
-            x2 = int(max(x_) * W) + 10
-            y2 = int(max(y_) * H) + 10
-            
+            # Calcolo coordinate pixel per il frontend
             landmarks_pixels = []
             for i in range(0, len(data_aux), 2):
                 landmarks_pixels.append({
@@ -158,19 +165,15 @@ def process_frame(frame, recognizer, hands):
                     'y': int(data_aux[i+1] * H)
                 })
 
-            return {
-            'letter': predicted_character,
-            'bbox': [x1, y1, x2, y2], # Usiamo una lista [] invece di tupla () per JSON
-            'landmarks': landmarks_pixels, # Inviamo la lista di oggetti x,y
-            'has_hand': True
-        }
-    
-    return {
-            'letter': predicted_character,
-            'bbox': [x1, y1, x2, y2], # Usiamo una lista [] invece di tupla () per JSON
-            'landmarks': landmarks_pixels, # Inviamo la lista di oggetti x,y
-            'has_hand': True
-        }
+            response.update({
+                'letter': predicted_character,
+                'bbox': [int(min(x_pts)*W), int(min(y_pts)*H), int(max(x_pts)*W), int(max(y_pts)*H)],
+                'landmarks': landmarks_pixels,
+                'has_hand': True,
+                'confidence': 0.95 # O il valore reale dal tuo modello
+            })
+            
+    return response
 
 def main():
     """Funzione principale per eseguire il riconoscimento standalone"""

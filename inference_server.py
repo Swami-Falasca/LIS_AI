@@ -34,6 +34,7 @@ def get_status():
         'message': 'Server LIS AI attivo e funzionante'
     })
 
+
 @app.route('/api/predict', methods=['POST'])
 def predict():
     """Endpoint per riconoscimento da singolo frame"""
@@ -146,7 +147,7 @@ def stream():
             }
             yield f"data: {json.dumps(heartbeat)}\n\n"
             
-            time.sleep(0.1)  # 10 FPS
+            time.sleep(0.01) 
     
     return Response(generate(), mimetype='text/event-stream')
 
@@ -165,6 +166,18 @@ def reset():
         'message': 'Stato del riconoscitore resettato',
         'timestamp': time.time()
     })
+
+@app.route('/api/predict_landmarks', methods=['POST'])
+def predict_landmarks():
+    data = request.json
+    landmarks = data.get('landmarks') # Riceve array di 42 numeri
+    
+    if not landmarks or len(landmarks) != 42:
+        return jsonify({'letter': '?'}), 400
+
+    # Usa il tuo recognizer esistente
+    prediction = recognizer.predict(np.array(landmarks))
+    return jsonify({'letter': prediction})
 
 if __name__ == '__main__':
     print("=" * 50)

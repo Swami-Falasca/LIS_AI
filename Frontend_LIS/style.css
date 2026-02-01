@@ -179,41 +179,46 @@ body {
 /* ===== VIDEO PANEL ===== */
 .video-wrapper {
     position: relative;
-    width: 640px;   /* Forza la larghezza */
-    height: 480px;  /* Forza l'altezza */
+    width: 640px;
+    height: 480px; /* Deve essere identico alla risoluzione della camera */
     margin: 0 auto;
     background: #000;
+    overflow: visible; /* Cambiato da hidden a visible per test */
 }
 
 .video-container {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 9;  
+    height: 100%;
     background: #0f172a;
     border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 20px;
+    overflow: hidden; /* Il ritaglio deve avvenire qui */
     border: 2px solid #475569;
 }
 
-#webcam, #output-canvas {
+#webcam {
     position: absolute;
     top: 0;
     left: 0;
-    width: 640px;  /* Non usare 100% */
-    height: 480px; /* Non usare 100% */
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block !important; /* Forza la visibilità */
+    z-index: 1;
+    transform: scaleX(-1);
 }
 
 #output-canvas {
-    z-index: 10; /* Deve stare sopra il video */
-    pointer-events: none; /* Permette di cliccare "attraverso" il canvas se serve */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5; /* Sopra il video */
+    pointer-events: none;
+    transform: scaleX(-1);
 }
 
-#webcam {
-    object-fit: contain;   
-    display: none;         
-    background-color: #000;
-}
 
 .video-placeholder {
     position: absolute;
