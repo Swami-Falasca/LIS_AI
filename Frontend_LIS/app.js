@@ -59,7 +59,13 @@ async function sendToBackend(landmarks) {
             body: JSON.stringify({ landmarks: landmarks })
         });
         const data = await response.json();
-        if (data.letter) elements.resultDisplay.textContent = data.letter;
+       if (data.letter) {
+    // 1. FORZA MAIUSCOLO
+    const upperLetter = data.letter.toUpperCase();
+    
+    // 2. IMPOSTA NEL DISPLAY
+    elements.resultDisplay.textContent = upperLetter;
+       }
     } catch (e) {
         console.warn("Server offline o rotta mancante");
     }
