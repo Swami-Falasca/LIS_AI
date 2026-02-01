@@ -23,12 +23,13 @@ LIS_AI è un progetto dedicato alla creazione di un sistema di intelligenza arti
   .venv/bin/activate
 
 4.	Installare le seguenti dipendenze: 
-    - mediapipe
-    - matplotlib.pyplot
-    - picke
-    - numpy
-    - scikit-Learn
-    - keras
+    - mediapipe 0.10.7
+    - matplotlib 3.10.8
+    - numpy 1.23.5
+    - scikit-Learn 1.2.0
+    - keras 2.13.1
+    - tensorflow 2.13.0
+    
 
 6.	avviare il backend
      - python inference_classifier
