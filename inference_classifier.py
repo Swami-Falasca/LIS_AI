@@ -44,7 +44,7 @@ class HybridGestureRecognizer:
 
         # Prova a caricare modello dinamico (se esiste)
         try:
-            with open('./dynamic_models/lstm_model.p', 'rb') as f:
+            with open('./dynamic_models/gru_model.p', 'rb') as f:
                 dynamic_data = pickle.load(f)
                 self.dynamic_model = dynamic_data['model']
                 self.dynamic_label_map = dynamic_data['label_map']
