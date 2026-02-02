@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIS AI - Riconoscimento Linguaggio dei Segni</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header class="header">
+            <div class="logo">
+                <img src="images/logo.png" class="logo-img" alt="LIS AI Logo">
+                <h1>Riconoscimento Linguaggio dei Segni</h1>
+            </div>
+            <div class="header-right">
+                <p class="subtitle">Sistema di interpretazione AI in tempo reale</p>
+                <div class="connection-status" id="connection-status">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Disconnesso</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- STATUS BAR -->
+        <div class="status-bar">
+            <div class="status-item">
+                <i class="fas fa-hashtag"></i>
+                <div>
+                    <div class="status-label">Segni Riconosciuti</div>
+                    <div class="status-value" id="signs-count">0</div>
+                </div>
+            </div>
+            <div class="status-item">
+                <i class="fas fa-clock"></i>
+                <div>
+                    <div class="status-label">Tempo Sessione</div>
+                    <div class="status-value" id="session-time">0:00</div>
+                </div>
+            </div>
+            <div class="status-item">
+                <i class="fas fa-chart-line"></i>
+                <div>
+                    <div class="status-label">Confidenza Media</div>
+                    <div class="status-value" id="avg-confidence">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- LEFT PANEL - VIDEO -->
+            <div class="panel video-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-video"></i> Feed Video</h2>
+                    <div class="webcam-status" id="webcam-status">In attesa di avvio...</div>
+                </div>
+                <div class="video-container">
+                    <video id="webcam" autoplay muted playsinline></video>
+                    <canvas id="output-canvas" class="landmarks-canvas"></canvas>
+                    <div class="video-placeholder" id="video-placeholder">
+                        <i class="fas fa-video-slash"></i>
+                        <p>Premi "Avvia" per iniziare</p>
+                    </div>
+                    <div class="video-overlay">
+                        <div class="fps-counter">FPS: <span id="fps">0</span></div>
+                        <div class="resolution">640×480</div>
+                    </div>
+                </div>
+                <div class="video-tip">
+                    <i class="fas fa-lightbulb"></i>
+                    Assicurati che la tua mano sia ben illuminata e completamente visibile
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL - CONTROLS & RESULTS -->
+            <div class="panel controls-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-sliders-h"></i> Controlli</h2>
+                </div>
+                
+                <div class="controls-grid">
+    <button class="control-btn btn-start" id="btn-start">
+        <i class="fas fa-play"></i> Avvia
+    </button>
+    <button class="control-btn btn-stop" id="btn-stop">
+        <i class="fas fa-stop"></i> Stop
+    </button>
+    <button class="control-btn btn-test" id="btn-test">
+        <i class="fas fa-save"></i> Salva
+    </button>
+    <button class="control-btn btn-clear" id="btn-clear">
+        <i class="fas fa-broom"></i> Pulisci
+    </button>
+</div>
+
+                <div class="results-section">
+                    <h3><i class="fas fa-poll"></i> Risultato Riconoscimento</h3>
+                    <div class="result-display" id="result-display">
+                        <div class="result-placeholder">
+                            <i class="fas fa-hand-point-up"></i>
+                            <p>Avvia il riconoscimento</p>
+                            <small>I risultati appariranno qui</small>
+                        </div>
+                        <div class="result-active" id="result-active" style="display: none;">
+                            <div class="detected-letter" id="detected-letter">A</div>
+                            <div class="confidence-container">
+                                <div class="confidence-label">Confidenza</div>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" id="confidence-fill"></div>
+                                </div>
+                                <div class="confidence-value" id="confidence-value">87%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="history-section">
+                    <h3><i class="fas fa-history"></i> Cronologia</h3>
+                    <div class="history-container">
+                        <div class="history-placeholder" id="history-placeholder">
+                            <i class="fas fa-clock"></i>
+                            <p>Nessun riconoscimento ancora</p>
+                            <small>La cronologia apparirà qui</small>
+                        </div>
+                        <div class="history-list" id="history-list" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="footer">
+           <div class="footer-bottom">
+        <p>© 2024 LIS AI System. Tutti i diritti riservati.</p>
+        <p>Progetto sviluppato per la comunità sorda</p>
+    </div>
+</footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
