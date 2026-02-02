@@ -476,3 +476,205 @@ body {
 .slide-in {
     animation: slideIn 0.5s ease forwards;
 }
+
+/* ===== RESULTS SECTION ===== */
+.results-section, .history-section {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #475569;
+}
+
+.results-section h3, .history-section h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.results-section h3 i, .history-section h3 i {
+    color: #60a5fa;
+}
+
+.result-display {
+    background: rgba(15, 23, 42, 0.8);
+    border-radius: 12px;
+    padding: 30px;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #475569;
+}
+
+.result-placeholder {
+    text-align: center;
+    color: #64748b;
+}
+
+.result-placeholder i {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.result-placeholder p {
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+    color: #94a3b8;
+}
+
+.result-placeholder small {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.result-active {
+    text-align: center;
+    width: 100%;
+}
+
+.detected-letter {
+    font-size: 9rem !important;
+    font-weight: 900;
+    font-family: 'Roboto Mono', monospace;
+    background: linear-gradient(90deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 24px;
+    text-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    text-transform:uppercase;
+}
+
+/* ===== HISTORY SECTION ===== */
+.history-container {
+    background: rgba(15, 23, 42, 0.8);
+    border-radius: 12px;
+    padding: 30px;
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #475569;
+}
+
+.history-placeholder {
+    text-align: center;
+    color: #64748b;
+}
+
+.history-placeholder i {
+    font-size: 2.5rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.history-placeholder p {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+    color: #94a3b8;
+}
+
+.history-placeholder small {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.history-list {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Trasforma la lista in una vera riga di testo */
+/* Il riquadro contenitore della cronologia */
+#history-list {
+    width: 100%;
+    min-height: 80px;
+    background: rgba(15, 23, 42, 0.5) !important; /* Sfondo scuro semitrasparente */
+    border: 1px solid #377bda;
+    border-radius: 12px;
+    padding: 15px 20px;
+    overflow-x: auto; /* Permette lo scroll orizzontale se la frase è lunga */
+}
+
+/* Il testo della frase */
+.sentence-text {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 2rem;
+    color: #60a5fa;
+    letter-spacing: 2px;
+    white-space: pre; /* Mantiene gli spazi premuti dal tasto Spazio */
+    display: flex;
+    align-items: center;
+}
+
+/* Effetto cursore lampeggiante alla fine della frase */
+.sentence-text::after {
+    content: "_";
+    animation: blink 1s infinite;
+    margin-left: 5px;
+}
+
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Rimuovi lo stile dei vecchi history-item e aggiungi il cursore */
+.history-list::after {
+    content: "|";
+    animation: blink 1s infinite;
+    margin-left: 5px;
+}
+
+@keyframes blink { 50% { opacity: 0; } }
+
+.history-item {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: 'Roboto Mono', monospace;
+    color: #60a5fa;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.history-item.latest {
+    border-color: #10b981;
+    transform: scale(1.1);
+    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+}
+
+/* Animazione per i nuovi box nella cronologia */
+.history-item.slide-in {
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Fix per la lettera gigante: centraggio perfetto */
+.detected-letter {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 150px; /* Altezza fissa per stabilità */
+    margin: 0 auto 20px auto;
+}
+
+/* Stile speciale per lo spazio nella cronologia */
+.history-item:empty, .history-item:contains('&nbsp;') {
+    background: rgba(255,255,255,0.1);
+    border: 1px dashed #475569;
+}
+
+.history-list::after { display: none !important; } /* Rimuove vecchi cursori */

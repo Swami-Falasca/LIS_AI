@@ -20,11 +20,15 @@ const elements = {
     resultDisplay: document.getElementById('detected-letter'),
     resultActive: document.getElementById('result-active'),
     resultPlaceholder: document.querySelector('.result-placeholder'),
+
+    // Cronologia
+    historyList: document.getElementById('history-list'),
+    historyPlaceholder: document.getElementById('history-placeholder')
 };
 
 let appState = {
-    isRunning: false
-    // currentSentence RIMOSSO
+    isRunning: false,
+    currentSentence: ""
 };
 
 // Configura MediaPipe
@@ -82,8 +86,6 @@ async function sendToBackend(landmarks) {
        if (data.letter) {
             const letter = data.letter.toUpperCase();
             elements.resultDisplay.textContent = letter;
-            // RIGHE DELLA CONFIDENZA RIMOSSE
-            // QUEL 's.confidenceFill...' ERRATO È STATO RIMOSSO
        }
     } catch (e) {
         console.warn("Server offline o rotta mancante");
@@ -166,6 +168,20 @@ function stopRecognition() {
 const statusDot = document.querySelector('.status-dot');
 const statusText = document.querySelector('.status-text');
 
+function updateHistoryUI() {
+    if (appState.currentSentence.length > 0) {
+        elements.historyPlaceholder.style.display = 'none';
+        elements.historyList.style.display = 'block';
+        
+        elements.historyList.innerHTML = `
+            <div class="sentence-text">${appState.currentSentence}</div>
+        `;
+    } else {
+        elements.historyPlaceholder.style.display = 'flex';
+        elements.historyList.style.display = 'none';
+    }
+}
+
 async function updateSystemStatus() {
     const isOnline = await checkServerStatus();
     if (isOnline) {
@@ -214,13 +230,22 @@ elements.btnStart.onclick = async () => {
 
 elements.btnStop.onclick = stopRecognition;
 
-// IL PULSANTE SALVA NON FA PIÙ NULLA (PUOI CAMBIARE SUCCESSIVAMENTE)
+// Evento Salva Lettera
 elements.btnSave.onclick = () => {
-    // Vuoto - da implementare se necessario
+    const letter = elements.resultDisplay.textContent;
+    if (letter && letter !== "-") {
+        appState.currentSentence += letter;
+        updateHistoryUI();
+    }
 };
 
+// Evento Pulisci Frase
 elements.btnClear.onclick = () => {
-    // Solo reset timer
+    appState.currentSentence = "";
+    elements.historyList.innerHTML = "";
+    elements.historyList.style.display = 'none';
+    elements.historyPlaceholder.style.display = 'flex';
+    // Reset timer opzionale
     if (sessionTimer) {
         clearInterval(sessionTimer);
         document.getElementById('session-time').textContent = "0:00";
