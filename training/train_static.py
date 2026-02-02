@@ -46,7 +46,7 @@ with open('model_performance.pkl', 'wb') as f:
 
 print('{}% of samples were classified correctly!'.format(score * 100))
 
-f = open('model.p', 'wb') #da libreria pickle
+f = open('../models/model.p', 'wb') #da libreria pickle
 pickle.dump({'model':model}, f)
 f.close()
 
