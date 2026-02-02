@@ -33,25 +33,12 @@
 
         <!-- STATUS BAR -->
         <div class="status-bar">
-            <div class="status-item">
-                <i class="fas fa-hashtag"></i>
-                <div>
-                    <div class="status-label">Segni Riconosciuti</div>
-                    <div class="status-value" id="signs-count">0</div>
-                </div>
-            </div>
+        
             <div class="status-item">
                 <i class="fas fa-clock"></i>
                 <div>
                     <div class="status-label">Tempo Sessione</div>
                     <div class="status-value" id="session-time">0:00</div>
-                </div>
-            </div>
-            <div class="status-item">
-                <i class="fas fa-chart-line"></i>
-                <div>
-                    <div class="status-label">Confidenza Media</div>
-                    <div class="status-value" id="avg-confidence">0%</div>
                 </div>
             </div>
         </div>
@@ -113,26 +100,7 @@
                         </div>
                         <div class="result-active" id="result-active" style="display: none;">
                             <div class="detected-letter" id="detected-letter">A</div>
-                            <div class="confidence-container">
-                                <div class="confidence-label">Confidenza</div>
-                                <div class="confidence-bar">
-                                    <div class="confidence-fill" id="confidence-fill"></div>
-                                </div>
-                                <div class="confidence-value" id="confidence-value">87%</div>
-                            </div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="history-section">
-                    <h3><i class="fas fa-history"></i> Cronologia</h3>
-                    <div class="history-container">
-                        <div class="history-placeholder" id="history-placeholder">
-                            <i class="fas fa-clock"></i>
-                            <p>Nessun riconoscimento ancora</p>
-                            <small>La cronologia apparirà qui</small>
-                        </div>
-                        <div class="history-list" id="history-list" style="display: none;"></div>
                     </div>
                 </div>
             </div>

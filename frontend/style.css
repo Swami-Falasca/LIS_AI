@@ -25,8 +25,8 @@ body {
 /* ===== HEADER ===== */
 .header {
     text-align: center;
-    margin-bottom: 32px;
-    padding-bottom: 20px;
+    margin-bottom: 24px; /* Ridotto */
+    padding-bottom: 16px; /* Ridotto */
     border-bottom: 1px solid #377bda;
 }
 
@@ -43,15 +43,15 @@ body {
     color: #377bda;
 }
 .logo-img {
-    width: 100px; /* Leggermente più grande per visibilità */
+    width: 100px;
     height: 75px;
     border-radius: 13px;
     object-fit: contain;
-    border: solid 2px #225982   ;
+    border: solid 2px #225982;
     transition: transform 0.3s ease;
     margin-right: 60px;
     background-color: #225982;
-     margin-top: 20px; ;  
+    margin-top: 20px;
 }
 .logo h1 {
     font-size: 2.2rem;
@@ -71,15 +71,20 @@ body {
 
 /* ===== STATUS BAR ===== */
 .status-bar {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    display: flex;
+    justify-content: center;
+    align-items: center; /* Centra verticalmente */
     gap: 20px;
     background: rgba(30, 41, 59, 0.7);
     backdrop-filter: blur(10px);
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 32px;
+    border-radius: 12px; /* Più piccolo */
+    padding: 16px 32px; /* Padding più compatto */
+    margin-bottom: 24px; /* Ridotto */
     border: 1px solid #475569;
+    max-width: 300px; /* Larghezza massima ridotta */
+    margin-left: auto;
+    margin-right: auto; /* Centra orizzontalmente */
+    width: fit-content; /* Si adatta al contenuto */
 }
 
 .status-item {
@@ -89,22 +94,22 @@ body {
 }
 
 .status-item i {
-    font-size: 1.8rem;
+    font-size: 1.5rem; /* Ridotto */
     color: #60a5fa;
-    width: 40px;
+    width: 35px; /* Ridotto */
     text-align: center;
 }
 
 .status-label {
-    font-size: 0.9rem;
+    font-size: 0.85rem; /* Ridotto */
     color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 4px;
+    margin-bottom: 3px; /* Ridotto */
 }
 
 .status-value {
-    font-size: 1.5rem;
+    font-size: 1.3rem; /* Ridotto */
     font-weight: 600;
     color: #f1f5f9;
     font-family: 'Roboto Mono', monospace;
@@ -112,20 +117,18 @@ body {
 
 .status-value.demo {
     color: #fbbf24;
-    font-size: 1rem;
+    font-size: 0.9rem; /* Ridotto */
 }
 
 /* ===== MAIN CONTENT ===== */
 .main-content {
     display: grid;    
-    grid-template-columns:70% 30%;     
+    grid-template-columns: 70% 30%;     
     gap: 32px;
     flex: 1;
     margin-bottom: 32px;
     width: 100%;           
 }
-
-
 
 @media (max-width: 1024px) {
     .main-content {
@@ -180,10 +183,10 @@ body {
 .video-wrapper {
     position: relative;
     width: 640px;
-    height: 480px; /* Deve essere identico alla risoluzione della camera */
+    height: 480px;
     margin: 0 auto;
     background: #000;
-    overflow: visible; /* Cambiato da hidden a visible per test */
+    overflow: visible;
 }
 
 .video-container {
@@ -192,7 +195,7 @@ body {
     height: 100%;
     background: #0f172a;
     border-radius: 12px;
-    overflow: hidden; /* Il ritaglio deve avvenire qui */
+    overflow: hidden;
     border: 2px solid #475569;
 }
 
@@ -203,7 +206,7 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block !important; /* Forza la visibilità */
+    display: block !important;
     z-index: 1;
     transform: scaleX(-1);
 }
@@ -214,11 +217,10 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 5; /* Sopra il video */
+    z-index: 5;
     pointer-events: none;
     transform: scaleX(-1);
 }
-
 
 .video-placeholder {
     position: absolute;
@@ -336,13 +338,13 @@ body {
 }
 
 /* ===== RESULTS SECTION ===== */
-.results-section, .history-section {
+.results-section {
     margin-top: 24px;
     padding-top: 24px;
     border-top: 1px solid #475569;
 }
 
-.results-section h3, .history-section h3 {
+.results-section h3 {
     font-size: 1.3rem;
     font-weight: 600;
     margin-bottom: 20px;
@@ -352,7 +354,7 @@ body {
     gap: 10px;
 }
 
-.results-section h3 i, .history-section h3 i {
+.results-section h3 i {
     color: #60a5fa;
 }
 
@@ -404,175 +406,13 @@ body {
     background-clip: text;
     margin-bottom: 24px;
     text-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-    text-transform:uppercase;
-}
-
-.confidence-container {
-    background: rgba(30, 41, 59, 0.8);
-    border-radius: 12px;
-    padding: 20px;
-}
-
-.confidence-label {
-    font-size: 0.9rem;
-    color: #94a3b8;
-    margin-bottom: 12px;
     text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.confidence-bar {
-    height: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 12px;
-}
-
-.confidence-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #10b981, #22c55e);
-    border-radius: 10px;
-    width: 0%;
-    transition: width 1s ease;
-}
-
-.confidence-value {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #22c55e;
-    font-family: 'Roboto Mono', monospace;
-}
-
-/* ===== HISTORY SECTION ===== */
-.history-container {
-    background: rgba(15, 23, 42, 0.8);
-    border-radius: 12px;
-    padding: 30px;
-    min-height: 150px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px dashed #475569;
-}
-
-.history-placeholder {
-    text-align: center;
-    color: #64748b;
-}
-
-.history-placeholder i {
-    font-size: 2.5rem;
-    margin-bottom: 16px;
-    opacity: 0.5;
-}
-
-.history-placeholder p {
-    font-size: 1.2rem;
-    margin-bottom: 8px;
-    color: #94a3b8;
-}
-
-.history-placeholder small {
-    font-size: 0.9rem;
-    color: #64748b;
-}
-
-.history-list {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-/* Trasforma la lista in una vera riga di testo */
-/* Il riquadro contenitore della cronologia */
-#history-list {
-    width: 100%;
-    min-height: 80px;
-    background: rgba(15, 23, 42, 0.5) !important; /* Sfondo scuro semitrasparente */
-    border: 1px solid #377bda;
-    border-radius: 12px;
-    padding: 15px 20px;
-    overflow-x: auto; /* Permette lo scroll orizzontale se la frase è lunga */
-}
-
-/* Il testo della frase */
-.sentence-text {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 2rem;
-    color: #60a5fa;
-    letter-spacing: 2px;
-    white-space: pre; /* Mantiene gli spazi premuti dal tasto Spazio */
-    display: flex;
-    align-items: center;
-}
-
-/* Effetto cursore lampeggiante alla fine della frase */
-.sentence-text::after {
-    content: "_";
-    animation: blink 1s infinite;
-    margin-left: 5px;
-}
-
-@keyframes blink { 50% { opacity: 0; } }
-
-/* Rimuovi lo stile dei vecchi history-item e aggiungi il cursore */
-.history-list::after {
-    content: "|";
-    animation: blink 1s infinite;
-    margin-left: 5px;
-}
-
-@keyframes blink { 50% { opacity: 0; } }
-
-.history-item {
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: 700;
-    font-family: 'Roboto Mono', monospace;
-    color: #60a5fa;
-    border: 2px solid transparent;
-    transition: all 0.3s ease;
-}
-
-.history-item.latest {
-    border-color: #10b981;
-    transform: scale(1.1);
-    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
-}
-
-/* Animazione per i nuovi box nella cronologia */
-.history-item.slide-in {
-    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-@keyframes popIn {
-    0% { transform: scale(0); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-}
-
-/* Fix per la lettera gigante: centraggio perfetto */
-.detected-letter {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 150px; /* Altezza fissa per stabilità */
+    height: 150px;
     margin: 0 auto 20px auto;
 }
-
-/* Stile speciale per lo spazio nella cronologia */
-.history-item:empty, .history-item:contains('&nbsp;') {
-    background: rgba(255,255,255,0.1);
-    border: 1px dashed #475569;
-}
-
-.history-list::after { display: none !important; } /* Rimuove vecchi cursori */
 
 /* ===== FOOTER ===== */
 .footer {
